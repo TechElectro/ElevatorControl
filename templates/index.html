@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Ascensor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 500px; margin: auto; }
+        .control-group { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        h2 { margin-top: 0; }
+        input { width: 95%; padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px 15px; cursor: pointer; }
+        #status { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Panel de Control de Ascensor</h1>
+
+        <div class="control-group">
+            <h2>Abrir Puerta (Comando 0x2C)</h2>
+            <label for="door_id">ID de Puerta (Relé):</label>
+            <input type="number" id="door_id" value="1">
+            <button onclick="openDoor()">Abrir Puerta</button>
+        </div>
+
+        <div class="control-group">
+            <h2>Agregar Tarjeta (Comando 0xC1)</h2>
+            <label for="card_id">ID de Tarjeta (único, ej. 1, 2, 3...):</label>
+            <input type="text" id="card_id" placeholder="Ej: 1">
+            
+            <label for="card_number">Número de Tarjeta (físico, ej. 12345678):</label>
+            <input type="text" id="card_number" placeholder="Ej: 12345678">
+
+            <label for="floors">Pisos (Bitmask, ej. 1=Piso1, 3=Piso1+2, 255=Pisos 1-8):</label>
+            <input type="text" id="floors" placeholder="Ej: 1">
+
+            <label for="name">Nombre (máx 8 caracteres GB2312):</label>
+            <input type="text" id="name" placeholder="Ej: Juan">
+            
+            <button onclick="addCard()">Agregar Tarjeta</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000'; // URL de tu backend Flask
+
+        async function openDoor() {
+            const doorId = document.getElementById('door_id').value;
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Enviando comando Abrir Puerta...';
+
+            try {
+                const response = await fetch(`${API_URL}/api/open-door`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ door: doorId })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    statusDiv.textContent = `Éxito: ${result.message}`;
+                    statusDiv.style.color = 'green';
+                } else {
+                    statusDiv.textContent = `Error: ${result.message}`;
+                    statusDiv.style.color = 'red';
+                }
+            } catch (err) {
+                statusDiv.textContent = `Error de red: ${err.message}`;
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        async function addCard() {
+            const cardData = {
+                card_id: document.getElementById('card_id').value,
+                card_number: document.getElementById('card_number').value,
+                floors: document.getElementById('floors').value,
+                name: document.getElementById('name').value
+            };
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Enviando comando Agregar Tarjeta...';
+
+            try {
+                const response = await fetch(`${API_URL}/api/add-card`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cardData)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    statusDiv.textContent = `Éxito: ${result.message}`;
+                    statusDiv.style.color = 'green';
+                } else {
+                    statusDiv.textContent = `Error: ${result.message}`;
+                    statusDiv.style.color = 'red';
+                }
+            } catch (err) {
+                statusDiv.textContent = `Error de red: ${err.message}`;
+                statusDiv.style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>
