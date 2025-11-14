@@ -1,31 +1,35 @@
 # app.py
 from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS  # Necesitarás 'pip install Flask-Cors'
-import elevator_client
+from flask_cors import CORS
+import multiprocessing # ¡Importante!
+import elevator_service  # ¡Importante!
+
+# --- Configuración del Proceso de Fondo ---
+# Necesitamos una "Cola" para que Flask hable con el servicio de TCP
+command_queue = multiprocessing.Queue()
 
 app = Flask(__name__)
-# Habilitar CORS para permitir que el frontend llame al backend
 CORS(app) 
 
 @app.route('/')
 def index():
-    """Sirve la página principal del frontend."""
     return render_template('index.html')
 
 @app.route('/api/open-door', methods=['POST'])
 def api_open_door():
     """
     Endpoint de API para abrir una puerta.
+    ¡ESTO YA NO USA SOCKET! Solo pone un comando en la cola.
     """
     data = request.json
-    door_id = int(data.get('door', 1)) # Obtiene el ID de la puerta, por defecto 1
+    door_id = int(data.get('door', 1))
     
-    success, message = elevator_client.open_specific_door(door_id)
-    
-    if success:
-        return jsonify({"status": "success", "message": f"Comando 'Abrir Puerta {door_id}' enviado."})
-    else:
-        return jsonify({"status": "error", "message": message}), 500
+    try:
+        # Poner el comando en la cola para que el servicio lo maneje
+        command_queue.put({'action': 'open_door', 'door': door_id})
+        return jsonify({"status": "success", "message": f"Comando 'Abrir Puerta {door_id}' enviado al servicio."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error al enviar a la cola: {str(e)}"}), 500
 
 @app.route('/api/add-card', methods=['POST'])
 def api_add_card():
@@ -34,16 +38,25 @@ def api_add_card():
     """
     card_info = request.json
     
-    # Validación simple (puedes agregar más)
-    if not all(k in card_info for k in ('card_id', 'card_number', 'floors', 'name')):
-        return jsonify({"status": "error", "message": "Faltan datos (card_id, card_number, floors, name)"}), 400
-        
-    success, message = elevator_client.add_card_extended(card_info)
-    
-    if success:
-        return jsonify({"status": "success", "message": f"Tarjeta '{card_info['name']}' agregada."})
-    else:
-        return jsonify({"status": "error", "message": message}), 500
+    try:
+        # (Aún necesitas implementar esto en elevator_service.py)
+        # command_queue.put({'action': 'add_card', 'data': card_info})
+        return jsonify({"status": "info", "message": "Funcionalidad 'add_card' aún no conectada al servicio."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error al enviar a la cola: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # --- ¡Magia! ---
+    # 1. Iniciar el servicio de ascensor en un PROCESO SEPARADO
+    print("Iniciando servicio de ascensor en segundo plano...")
+    service_process = multiprocessing.Process(
+        target=elevator_service.start_service, 
+        args=(command_queue,)
+    )
+    service_process.daemon = True # Para que se cierre si Flask se cierra
+    service_process.start()
+    
+    # 2. Iniciar la aplicación Flask (en el proceso principal)
+    print("Iniciando servidor web Flask...")
+    app.run(debug=False, host='0.0.0.0', port=5000)
