@@ -5,8 +5,8 @@ import select
 import elevator_protocol  # Importamos nuestro constructor de tramas
 
 # --- Configuración ---
-CONTROLLER_IP = "192.168.0.100"  # ¡CAMBIA ESTO!
-CONTROLLER_PORT = 60000
+CONTROLLER_IP = "192.168.1.170"  # ¡CAMBIA ESTO!
+CONTROLLER_PORT = 8000
 
 class ElevatorService:
     def __init__(self, command_queue):
@@ -21,7 +21,7 @@ class ElevatorService:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.sock.settimeout(10.0)
                 self.sock.connect((CONTROLLER_IP, CONTROLLER_PORT))
-                self.sock.setblocking(False) # ¡Importante! Modo no bloqueante
+                self.sock.setblocking(True) # ¡Importante! Modo no bloqueante
                 print("Servicio: ¡Conectado al controlador!")
                 break
             except Exception as e:
@@ -69,7 +69,19 @@ class ElevatorService:
                 self.sock.sendall(frame)
                 print("Servicio: Comando (0x2C) enviado al controlador.")
             
-            # ... (Aquí manejarías 'add_card', etc.) ...
+            # --- ¡NUEVO BLOQUE! ---
+            elif command['action'] == 'add_card':
+                card_info = command['data']
+                print(f"Servicio: Recibida orden de Flask: Agregar Tarjeta {card_info['name']}")
+                
+                frame = elevator_protocol.build_add_card_frame(card_info)
+                
+                if frame:
+                    self.sock.sendall(frame)
+                    print("Servicio: Comando (0xC1) enviado al controlador.")
+                else:
+                    print("Servicio: Error, trama de 'add_card' no válida. No se envió.")
+            # --- FIN DEL NUEVO BLOQUE ---
 
         except Exception as e:
             # La cola estaba vacía, es normal.

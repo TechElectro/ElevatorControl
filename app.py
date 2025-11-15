@@ -31,6 +31,7 @@ def api_open_door():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error al enviar a la cola: {str(e)}"}), 500
 
+
 @app.route('/api/add-card', methods=['POST'])
 def api_add_card():
     """
@@ -38,10 +39,16 @@ def api_add_card():
     """
     card_info = request.json
     
+    # Validación simple (puedes mejorarla)
+    if not all(k in card_info for k in ('card_id', 'card_number', 'floors', 'name')):
+        return jsonify({"status": "error", "message": "Faltan datos (card_id, card_number, floors, name)"}), 400
+        
     try:
-        # (Aún necesitas implementar esto en elevator_service.py)
-        # command_queue.put({'action': 'add_card', 'data': card_info})
-        return jsonify({"status": "info", "message": "Funcionalidad 'add_card' aún no conectada al servicio."})
+        # --- ¡LÍNEA MODIFICADA! ---
+        # Poner el comando en la cola para que el servicio lo maneje
+        command_queue.put({'action': 'add_card', 'data': card_info})
+        
+        return jsonify({"status": "success", "message": f"Comando 'Agregar Tarjeta {card_info['name']}' enviado al servicio."})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error al enviar a la cola: {str(e)}"}), 500
 
