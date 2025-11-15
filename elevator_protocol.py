@@ -198,3 +198,26 @@ def build_add_card_frame(card_info):
     except Exception as e:
         print(f"Error al construir la trama de la tarjeta: {e}")
         return None
+    
+
+    # ... (después de la función build_add_card_frame) ...
+
+def build_delete_card_frame(card_id):
+    """
+    Construye la trama para el Comando: 0x15 (Eliminar una Tarjeta) 
+    """
+    print(f"Construyendo trama para eliminar tarjeta ID: {card_id}")
+
+    command = 0x15  # 
+    address = 0x00 # Dirección del controlador
+    door = 0x00    # No aplica
+
+    try:
+        # El PDF (p12) especifica 4 bytes, "high bit in front" (big-endian) 
+        data_payload = int(card_id).to_bytes(4, 'big')
+        
+        return build_frame(command, address, door, data_payload)
+
+    except Exception as e:
+        print(f"Error al construir la trama de eliminar tarjeta: {e}")
+        return None

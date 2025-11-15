@@ -83,6 +83,20 @@ class ElevatorService:
                     print("Servicio: Error, trama de 'add_card' no válida. No se envió.")
             # --- FIN DEL NUEVO BLOQUE ---
 
+            # --- ¡NUEVO BLOQUE! ---
+            elif command['action'] == 'delete_card':
+                card_id = command['card_id']
+                print(f"Servicio: Recibida orden de Flask: Eliminar Tarjeta {card_id}")
+                
+                frame = elevator_protocol.build_delete_card_frame(card_id)
+                
+                if frame:
+                    self.sock.sendall(frame)
+                    print("Servicio: Comando (0x15) enviado al controlador.")
+                else:
+                    print("Servicio: Error, trama de 'delete_card' no válida. No se envió.")
+            # --- FIN DEL NUEVO BLOQUE ---
+
         except Exception as e:
             # La cola estaba vacía, es normal.
             pass

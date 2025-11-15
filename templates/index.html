@@ -5,36 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Ascensor</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 500px; margin: auto; }
-        .control-group { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
-        h2 { margin-top: 0; }
-        input { width: 95%; padding: 8px; margin-bottom: 10px; }
-        button { padding: 10px 15px; cursor: pointer; }
-        #status { margin-top: 20px; font-weight: bold; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            margin: 20px; 
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .control-group { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            border-radius: 8px; 
+        }
+        h1, h2 { 
+            margin-top: 0; 
+            color: #1a535c;
+            border-bottom: 2px solid #f9a03f;
+            padding-bottom: 5px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] { 
+            width: 95%; 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button { 
+            padding: 12px 18px; 
+            cursor: pointer; 
+            background-color: #1a535c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #4ecdc4;
+        }
+        #status { 
+            margin-top: 20px; 
+            font-weight: bold; 
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Panel de Control de Ascensor V1.0</h1>
+        <h1>Panel de Control de Ascensor</h1>
 
         <div class="control-group">
             <h2>Abrir Puerta (Comando 0x2C)</h2>
             <label for="door_id">ID de Puerta (Relé):</label>
             <input type="number" id="door_id" value="1">
-            <button onclick="openDoor()">Pulse para Abrir Puerta</button>
+            <button onclick="openDoor()">Abrir Puerta</button>
         </div>
 
         <div class="control-group">
             <h2>Agregar Tarjeta (Comando 0xC1)</h2>
             <label for="card_id">ID de Tarjeta (único, ej. 1, 2, 3...):</label>
-            <input type="text" id="card_id" placeholder="Ej: 1">
+            <input type="number" id="card_id" placeholder="Ej: 1">
             
             <label for="card_number">Número de Tarjeta (físico, ej. 12345678):</label>
-            <input type="text" id="card_number" placeholder="Ej: 12345678">
+            <input type="number" id="card_number" placeholder="Ej: 12345678">
 
-            <label for="floors">Pisos (Bitmask, ej. 1=Piso1, 3=Piso1+2, 255=Pisos 1-8):</label>
-            <input type="text" id="floors" placeholder="Ej: 1">
+            <label for="floors">Pisos (Bitmask, ej. 1=Piso1, 3=Piso1+2):</label>
+            <input type="number" id="floors" placeholder="Ej: 1">
 
             <label for="name">Nombre (máx 8 caracteres GB2312):</label>
             <input type="text" id="name" placeholder="Ej: Juan">
@@ -42,15 +92,23 @@
             <button onclick="addCard()">Agregar Tarjeta</button>
         </div>
 
+        <div class="control-group">
+            <h2>Eliminar Tarjeta (Comando 0x15)</h2>
+            <label for="card_id_to_delete">ID de Tarjeta a Eliminar:</label>
+            <input type="number" id="card_id_to_delete" placeholder="Ej: 1">
+            <button onclick="deleteCard()">Eliminar Tarjeta</button>
+        </div>
+
+
         <div id="status"></div>
     </div>
 
     <script>
         const API_URL = 'http://127.0.0.1:5000'; // URL de tu backend Flask
+        const statusDiv = document.getElementById('status');
 
         async function openDoor() {
             const doorId = document.getElementById('door_id').value;
-            const statusDiv = document.getElementById('status');
             statusDiv.textContent = 'Enviando comando Abrir Puerta...';
 
             try {
@@ -81,7 +139,7 @@
                 floors: document.getElementById('floors').value,
                 name: document.getElementById('name').value
             };
-            const statusDiv = document.getElementById('status');
+            
             statusDiv.textContent = 'Enviando comando Agregar Tarjeta...';
 
             try {
@@ -89,6 +147,41 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(cardData)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    statusDiv.textContent = `Éxito: ${result.message}`;
+                    statusDiv.style.color = 'green';
+                } else {
+                    statusDiv.textContent = `Error: ${result.message}`;
+                    statusDiv.style.color = 'red';
+                }
+            } catch (err) {
+                statusDiv.textContent = `Error de red: ${err.message}`;
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        /*
+            NUEVA FUNCIÓN: Eliminar Tarjeta
+        */
+        async function deleteCard() {
+            const cardId = document.getElementById('card_id_to_delete').value;
+            
+            if (!cardId) {
+                statusDiv.textContent = "Error: Debes ingresar un ID de tarjeta para eliminar.";
+                statusDiv.style.color = 'red';
+                return;
+            }
+
+            statusDiv.textContent = `Enviando comando Eliminar Tarjeta ${cardId}...`;
+
+            try {
+                // Nota el método 'DELETE' y cómo se pasa el ID en la URL
+                const response = await fetch(`${API_URL}/api/delete-card/${cardId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 const result = await response.json();

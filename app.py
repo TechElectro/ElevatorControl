@@ -52,6 +52,25 @@ def api_add_card():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error al enviar a la cola: {str(e)}"}), 500
 
+# ... (después de la función api_add_card) ...
+
+@app.route('/api/delete-card/<int:card_id>', methods=['DELETE'])
+def api_delete_card(card_id):
+    """
+    Endpoint de API para eliminar una tarjeta por su ID.
+    Recibe el ID desde la URL.
+    """
+    if card_id <= 0:
+        return jsonify({"status": "error", "message": "ID de tarjeta no válido"}), 400
+
+    try:
+        # Poner el comando en la cola para que el servicio lo maneje
+        command_queue.put({'action': 'delete_card', 'card_id': card_id})
+        
+        return jsonify({"status": "success", "message": f"Comando 'Eliminar Tarjeta {card_id}' enviado al servicio."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error al enviar a la cola: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
     # --- ¡Magia! ---
